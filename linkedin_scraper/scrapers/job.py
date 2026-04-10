@@ -103,6 +103,7 @@ class JobScraper(BaseScraper):
         """Extract job title from h1 heading."""
         try:
             title_elem = self.page.locator('h1').first
+            await title_elem.wait_for(timeout=5000)
             title = await title_elem.inner_text()
             return title.strip()
         except:
@@ -142,6 +143,16 @@ class JobScraper(BaseScraper):
     async def _get_location(self) -> Optional[str]:
         """Extract job location from job details panel."""
         try:
+            container = self.page.locator('.job-details-jobs-unified-top-card__primary-description-container').first
+            if await container.count() > 0:
+                text = await container.inner_text()
+                parts = text.split('·')
+                if parts:
+                    return parts[0].strip().split('\n')[0].strip()
+        except:
+            pass
+            
+        try:
             job_panel = self.page.locator('h1').first.locator('xpath=ancestor::*[5]')
             if await job_panel.count() > 0:
                 text_elements = await job_panel.locator('span, div').all()
@@ -149,6 +160,10 @@ class JobScraper(BaseScraper):
                     text = await elem.inner_text()
                     if text and (',' in text or 'Remote' in text or 'United States' in text):
                         text = text.strip()
+                        # Avoid matching the job title if it contains a comma
+                        title = await self._get_job_title()
+                        if title and text == title:
+                            continue
                         if len(text) > 3 and len(text) < 100 and not text.startswith('$'):
                             return text
         except:
@@ -157,6 +172,16 @@ class JobScraper(BaseScraper):
     
     async def _get_posted_date(self) -> Optional[str]:
         """Extract posted date from job details."""
+        try:
+            container = self.page.locator('.job-details-jobs-unified-top-card__primary-description-container').first
+            if await container.count() > 0:
+                text = await container.inner_text()
+                parts = text.split('·')
+                if len(parts) > 1:
+                    return parts[1].strip().split('\n')[0].strip()
+        except:
+            pass
+            
         try:
             text_elements = await self.page.locator('span, div').all()
             for elem in text_elements:
@@ -171,6 +196,16 @@ class JobScraper(BaseScraper):
     
     async def _get_applicant_count(self) -> Optional[str]:
         """Extract applicant count from job details."""
+        try:
+            container = self.page.locator('.job-details-jobs-unified-top-card__primary-description-container').first
+            if await container.count() > 0:
+                text = await container.inner_text()
+                parts = text.split('·')
+                if len(parts) > 2:
+                    return parts[2].strip().split('\n')[0].strip()
+        except:
+            pass
+            
         try:
             main_content = self.page.locator('main').first
             if await main_content.count() > 0:
